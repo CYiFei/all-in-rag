@@ -89,6 +89,10 @@ prompt = ChatPromptTemplate.from_template("""请根据下面提供的上下文�
 
 # 配置大语言模型
 from langchain_community.chat_models import ChatTongyi
+from dotenv import load_dotenv
+
+# 加载环境变量（已通过验证脚本确认）
+load_dotenv()
 llm = ChatTongyi(model="qwen3-max", temperature=0.7)
 
 # 用户查询
