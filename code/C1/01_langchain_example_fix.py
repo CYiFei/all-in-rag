@@ -2,6 +2,9 @@ import os
 import nltk
 import sys
 
+# 将当前文件所在目录设置为工作目录
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 # === 重要：必须在导入任何库之前设置NLTK_DATA ===
 os.environ['NLTK_DATA'] = os.path.expanduser('~/nltk_data')
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'

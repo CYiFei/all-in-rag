@@ -23,7 +23,7 @@ loader = UnstructuredMarkdownLoader(markdown_path)
 print(loader)
 docs = loader.load()
 print(f"加载完成，共 {len(docs)} 个文档")
-
+print(docs)
 # 文本分块
 text_splitter = RecursiveCharacterTextSplitter()
 chunks = text_splitter.split_documents(docs)

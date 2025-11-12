@@ -1,0 +1,7 @@
+问题: 文中举了哪些例子？
+回答:
+content='文中举了以下例子：\n\n1. DeepMind 研发的走路的智能体；\n2. 机械臂抓取；\n3. OpenAI 的机械臂翻魔方；\n4. 小车上山（MountainCar-v0）例子。' additional_kwargs={} response_metadata={'model_name': 'qwen3-max', 'finish_reason': 'stop', 'request_id': '8b65102e-4d93-45d2-99fd-f046ab13e67d', 'token_usage': {'input_tokens': 1068, 'output_tokens': 53, 'prompt_tokens_details': {'cached_tokens': 0
+        }, 'total_tokens': 1121
+    }
+} id='run--d18ab3ec-9b7f-4248-ada5-50073eaa215a-0'
+==================================================
