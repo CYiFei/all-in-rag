@@ -1,5 +1,7 @@
 from unstructured.partition.auto import partition
-
+import os
+# 将当前文件所在目录设置为工作目录
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # PDF文件路径
 pdf_path = "../../data/C2/pdf/rag.pdf"
 

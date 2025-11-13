@@ -1,5 +1,8 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
+import os
+# 将当前文件所在目录设置为工作目录
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 loader = TextLoader("../../data/C2/txt/蜂医.txt", encoding="utf-8")
 docs = loader.load()
