@@ -1,12 +1,18 @@
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""  # 禁用GPU
 from tqdm import tqdm
 from glob import glob
 import torch
 from visual_bge.visual_bge.modeling import Visualized_BGE
 from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
+# 强制在CPU上运行
+device = torch.device("cpu")
 import numpy as np
 import cv2
 from PIL import Image
+
+
 
 # 1. 初始化设置
 MODEL_NAME = "BAAI/bge-base-en-v1.5"
@@ -19,7 +25,10 @@ MILVUS_URI = "http://localhost:19530"
 class Encoder:
     """编码器类，用于将图像和文本编码为向量。"""
     def __init__(self, model_name: str, model_path: str):
+        self.device = device
         self.model = Visualized_BGE(model_name_bge=model_name, model_weight=model_path)
+        # 强制使用CPU
+        self.model = self.model.cpu()
         self.model.eval()
 
     def encode_query(self, image_path: str, text: str) -> list[float]:
