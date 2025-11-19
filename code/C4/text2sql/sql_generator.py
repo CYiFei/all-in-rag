@@ -2,17 +2,20 @@ import os
 from typing import List, Dict, Any
 from langchain_deepseek import ChatDeepSeek
 from langchain.schema import HumanMessage, SystemMessage
-
+from dotenv import load_dotenv, find_dotenv
+from langchain_community.chat_models import ChatTongyi
+load_dotenv()
 
 class SimpleSQLGenerator:
     """简化的SQL生成器"""
     
     def __init__(self, api_key: str = None):
-        self.llm = ChatDeepSeek(
-            model="deepseek-chat",
-            temperature=0,
-            api_key=api_key or os.getenv("DEEPSEEK_API_KEY")
-        )
+        # self.llm = ChatDeepSeek(
+        #     model="deepseek-chat",
+        #     temperature=0,
+        #     api_key=api_key or os.getenv("DEEPSEEK_API_KEY")
+        # )
+        self.llm = ChatTongyi(model="qwen3-max", temperature=0.7)
     
     def generate_sql(self, user_query: str, knowledge_results: List[Dict[str, Any]]) -> str:
         """生成SQL语句"""
