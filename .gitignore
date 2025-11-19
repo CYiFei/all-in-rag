@@ -73,3 +73,4 @@ rag/
 *.secret
 
 .env
+code/C3/volumes/

@@ -1,4 +1,7 @@
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# os.environ["HTTP_PROXY"] = "http://127.0.0.1:7890"
+# os.environ["HTTPS_PROXY"] = "http://127.0.0.1:7890"
 from langchain_deepseek import ChatDeepSeek 
 from langchain_community.document_loaders import BiliBiliLoader
 from langchain.chains.query_constructor.base import AttributeInfo
@@ -8,6 +11,9 @@ from langchain_huggingface import HuggingFaceEmbeddings
 import logging
 
 logging.basicConfig(level=logging.INFO)
+
+# 2. 创建向量存储
+embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
 
 # 1. 初始化视频数据
 video_urls = [
@@ -20,7 +26,7 @@ bili = []
 try:
     loader = BiliBiliLoader(video_urls=video_urls)
     docs = loader.load()
-    
+    print("已加载的BiliBili视频:")
     for doc in docs:
         original = doc.metadata
         
@@ -44,7 +50,7 @@ if not bili:
     exit()
 
 # 2. 创建向量存储
-embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+# embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
 vectorstore = Chroma.from_documents(bili, embed_model)
 
 # 3. 配置元数据字段信息

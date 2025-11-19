@@ -152,7 +152,13 @@ class HybridMultimodalSearcher:
         
         # 连接Milvus
         print(f"--> 正在连接到 Milvus: {milvus_uri}")
-        connections.connect(uri=milvus_uri)
+        # connections.connect(uri=milvus_uri)
+        connections.connect(
+            alias="default",
+            host="localhost",
+            port="19530",
+            timeout=30
+        )
         self.milvus_client = MilvusClient(uri=milvus_uri)
         
         self.collection = None
@@ -170,9 +176,13 @@ class HybridMultimodalSearcher:
         multimodal_dim = len(self.encoder.encode_multimodal(sample_path, sample_text))
         dense_dim = self.encoder.bge_m3.dim["dense"]
         
+        # 计算合并后的向量维度
+        combined_dim = multimodal_dim + dense_dim
+    
         print(f"多模态向量维度: {multimodal_dim}")
         print(f"密集向量维度: {dense_dim}")
-
+        print(f"合并向量维度: {combined_dim}")
+        
         fields = [
             FieldSchema(name="pk", dtype=DataType.VARCHAR, is_primary=True, auto_id=True, max_length=100),
             FieldSchema(name="img_id", dtype=DataType.VARCHAR, max_length=100),
@@ -183,14 +193,14 @@ class HybridMultimodalSearcher:
             FieldSchema(name="location", dtype=DataType.VARCHAR, max_length=128),
             FieldSchema(name="environment", dtype=DataType.VARCHAR, max_length=64),
             # 三种向量类型
-            FieldSchema(name="multimodal_vector", dtype=DataType.FLOAT_VECTOR, dim=multimodal_dim),
+            # FieldSchema(name="multimodal_vector", dtype=DataType.FLOAT_VECTOR, dim=multimodal_dim),
+            # 单个合并的向量字段
+            FieldSchema(name="combined_vector", dtype=DataType.FLOAT_VECTOR, dim=combined_dim),
             FieldSchema(name="text_sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
-            FieldSchema(name="text_dense_vector", dtype=DataType.FLOAT_VECTOR, dim=dense_dim)
+            # FieldSchema(name="text_dense_vector", dtype=DataType.FLOAT_VECTOR, dim=dense_dim)
         ]
-        print("--> 创建 Collection 架构...")
+
         schema = CollectionSchema(fields, description="混合多模态龙类图像检索")
-        print("--> 创建 Schema:")
-        print(schema)
         self.collection = Collection(name=self.collection_name, schema=schema, consistency_level="Strong")
         print("--> Collection 创建成功")
 
@@ -198,18 +208,19 @@ class HybridMultimodalSearcher:
         print("--> 正在创建索引...")
         # 多模态向量索引
         multimodal_index = {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efConstruction": 256}}
-        self.collection.create_index("multimodal_vector", multimodal_index)
+        # self.collection.create_index("multimodal_vector", multimodal_index)
+        self.collection.create_index("combined_vector", multimodal_index)
         print("多模态向量索引创建成功")
         
         # 稀疏向量索引
-        sparse_index = {"index_type": "SPARSE_INVERTED_INDEX", "metric_type": "IP"}
-        self.collection.create_index("text_sparse_vector", sparse_index)
+        # sparse_index = {"index_type": "SPARSE_INVERTED_INDEX", "metric_type": "IP"}
+        # self.collection.create_index("text_sparse_vector", sparse_index)
         print("稀疏向量索引创建成功")
         
         # 密集向量索引
-        dense_index = {"index_type": "AUTOINDEX", "metric_type": "IP"}
-        self.collection.create_index("text_dense_vector", dense_index)
-        print("密集向量索引创建成功")
+        # dense_index = {"index_type": "AUTOINDEX", "metric_type": "IP"}
+        # self.collection.create_index("text_dense_vector", dense_index)
+        # print("密集向量索引创建成功")
         
         self.collection.load()
         print(f"--> Collection '{self.collection_name}' 已加载到内存")
@@ -222,7 +233,8 @@ class HybridMultimodalSearcher:
             # 准备批量数据
             img_ids, image_paths, titles, descriptions = [], [], [], []
             categories, locations, environments = [], [], []
-            multimodal_vectors, text_sparse_vectors, text_dense_vectors = [], [], []
+            # multimodal_vectors, text_sparse_vectors, text_dense_vectors = [], [], []
+            combined_vectors, text_sparse_vectors = [], []
             
             for img_data in tqdm(self.dataset.images, desc="生成向量嵌入"):
                 text_content = self.dataset.get_text_content(img_data)
@@ -231,7 +243,13 @@ class HybridMultimodalSearcher:
                 multimodal_vector = self.encoder.encode_multimodal(img_data.path, text_content)
                 
                 # 生成文本的混合向量（稀疏+密集）
+                # text_embeddings = self.encoder.encode_text_hybrid(text_content)
+                # 生成文本的混合向量（稀疏+密集）
                 text_embeddings = self.encoder.encode_text_hybrid(text_content)
+                dense_vector = text_embeddings['dense'][0]
+                
+                # 合并向量
+                combined_vector = multimodal_vector + dense_vector.tolist()
                 
                 # 收集数据
                 img_ids.append(img_data.img_id)
@@ -242,14 +260,16 @@ class HybridMultimodalSearcher:
                 locations.append(img_data.location)
                 environments.append(img_data.environment)
                 
-                multimodal_vectors.append(multimodal_vector)
+                # multimodal_vectors.append(multimodal_vector)
+                # text_sparse_vectors.append(text_embeddings['sparse']._getrow(0))
+                # text_dense_vectors.append(text_embeddings['dense'][0])
+                combined_vectors.append(combined_vector)
                 text_sparse_vectors.append(text_embeddings['sparse']._getrow(0))
-                text_dense_vectors.append(text_embeddings['dense'][0])
             
             # 插入数据
             self.collection.insert([
                 img_ids, image_paths, titles, descriptions, categories, locations, environments,
-                multimodal_vectors, text_sparse_vectors, text_dense_vectors
+                combined_vectors, text_sparse_vectors
             ])
             
             self.collection.flush()
@@ -284,8 +304,10 @@ class HybridMultimodalSearcher:
             # 稀疏向量检索
             query_embeddings = self.encoder.encode_text_hybrid(query_text)
             sparse_vec = query_embeddings['sparse']._getrow(0)
+            # 稀疏向量搜索通常使用空参数
+            sparse_search_params = {}
             results = self.collection.search(
-                [sparse_vec], "text_sparse_vector", param=search_params,
+                [sparse_vec], "text_sparse_vector", param=sparse_search_params,
                 limit=top_k, output_fields=output_fields
             )[0]
             
